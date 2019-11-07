@@ -1,3 +1,8 @@
+# DISCLAIMER for developers
+# There is many (crazy) monkey code.
+# Do not repeat it at home.
+
+
 from urllib.request import (
     HTTPError,
     urlopen
