@@ -404,9 +404,6 @@ for n, v in globs.items():
         TAG_HANDLERS[v.tag] = v
 
 RE_EXCLUSIONS = [
-    compile(".*www\.x\.org/wiki/Events/.*"),
-    compile(".*www\.x\.org/releases/(?!current/).*"),
-    compile(".*(((\.gz)|(\.sig)|(\.bz2)|(\.Z))(\.old)?)$")
 ]
 
 
