@@ -498,8 +498,13 @@ def main():
                             updated.append(ref)
                             referenced_sites.add(os.site_base)
                             continue
-                        except HTTPError:
-                            print_exc()
+                        except HTTPError as httpe:
+                            if httpe.code == 403:
+                                print("Access forbidden")
+                            elif httpe.code == 404:
+                                print("Not found")
+                            else:
+                                print_exc()
                             updated.append(SKIP)
                             ref_errors = True
                             continue
