@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 # DISCLAIMER for developers
 # There is many (crazy) monkey code.
 # Do not repeat it at home.
