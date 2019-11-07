@@ -122,9 +122,12 @@ class Resourse(object):
     @property
     def is_page(self):
         res = False
-        if "." not in self.url_tuple[-1]:
+        url_tuple = self.url_tuple
+        if len(url_tuple) == 0:
             res = True
-        elif page_re.match(self.url_tuple[-1]):
+        elif "." not in url_tuple[-1]:
+            res = True
+        elif page_re.match(url_tuple[-1]):
             res = True
         self.__dict__["is_page"] = res
         return res
@@ -205,7 +208,7 @@ class Resourse(object):
 
         for name in parts:
             if name == ".":
-                if cur_url[-1] == "":
+                if len(cur_url) and cur_url[-1] == "":
                     cur_url.pop()
             elif name == "..":
                 if cur_url.pop() == "":
@@ -269,7 +272,7 @@ class Site(object):
 
         for name in parts:
             if name == ".":
-                if cur_url[-1] == "":
+                if len(cur_url) and cur_url[-1] == "":
                     cur_url.pop()
             elif name == "..":
                 if cur_url.pop() == "":
@@ -290,6 +293,9 @@ class Site(object):
 
         # if url_tuple[0] != self.site_base:
         #    raise RuntimeError("Other site " + self._full_url(url_tuple))
+        if len(url_tuple) == 0:
+            url_tuple = ("",)
+
         filename_list = self.dir + url_tuple
 
         if not filename_list[-1]:
