@@ -416,6 +416,7 @@ def main():
 
     starting = site["."]
 
+    # Queue of pages to process
     queue = deque([starting])
 
     visited = set()
@@ -437,11 +438,20 @@ def main():
 
         ref_errors = False
 
+        # stack of page DOM tree traversing
         stack = [(0, tree)]
 
         while stack:
             depth, el = stack.pop()
             # print(" " * depth + str(el))
+
+            # Some tags have references to other resources (pages, images,
+            # files). Many of them must be downloaded and saved in a file.
+            # Each reference must be redirected to the file.
+            # Also, tags frequently have different formats and catch
+            # conditions.
+            # There is a handler class for each supported tag name. Instances
+            # of that handlers hides the differences.
 
             tag = el.tag
             if tag in TAG_HANDLERS:
