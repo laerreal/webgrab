@@ -20,6 +20,7 @@ from os.path import (
     exists
 )
 from os import (
+    environ,
     remove,
     rename,
     makedirs
@@ -34,7 +35,6 @@ from traceback import (
     print_exc
 )
 
-SITE = "https://www.x.org/wiki/guide/"
 
 # IRI
 # Based on:
@@ -237,7 +237,7 @@ class Site(object):
         suffix = url[1:]
         return proto, site_base, suffix
 
-    def __new__(cls, url, dir):
+    def __new__(cls, url, dir = None):
         key = cls.parse_url(url)[:2]
         try:
             site = cls.sites[key]
@@ -245,9 +245,12 @@ class Site(object):
             cls.sites[key] = site = super(Site, cls).__new__(cls)
         return site
 
-    def __init__(self, url, dir):
+    def __init__(self, url, dir = None):
+        self.proto, site_base, suffix = Site.parse_url(url)
+        self.site_base = site_base
+        if dir is None:
+            dir = site_base
         self.dir = tuple(abspath(dir).split(sep))
-        self.proto, self.site_base, suffix = Site.parse_url(url)
         self.prefix = tuple(suffix)
         self.url2file = {}
         self.file2desc = {}
@@ -408,7 +411,12 @@ def to_cache(iri):
 
 
 def main():
-    site = Site(SITE, "../x.org")
+    start_page = environ.get("WEBGRAB_SITE", None)
+    if start_page is None:
+        print("Set WEBGRAB_SITE environment variable")
+        return -1
+
+    site = Site(start_page)
 
     referenced_sites = set()
 
