@@ -235,7 +235,9 @@ class Resourse(object):
                 if len(cur_url) and cur_url[-1] == "":
                     cur_url.pop()
             elif name == "..":
-                if cur_url.pop() == "":
+                if not cur_url:
+                    print("Skipping .. beyond root in " + rel_url)
+                elif cur_url.pop() == "":
                     cur_url.pop()
             elif name == "":
                 if not cur_url or cur_url[-1]:
