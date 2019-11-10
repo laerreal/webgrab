@@ -27,6 +27,7 @@ from os.path import (
     exists
 )
 from os import (
+    name as os_name,
     environ,
     remove,
     rename,
@@ -88,9 +89,21 @@ def file_name_filter(char):
 def fix_file_name(name):
     return "".join(map(file_name_filter, name))
 
+if os_name == "nt":
+    disk_re = compile("[a-zA-Z]:")
 
-def fix_file_path(path_iter):
-    return tuple(map(fix_file_name, path_iter))
+    def fix_file_path(path_iter):
+        piter = iter(path_iter)
+        try:
+            first = next(piter)
+        except StopIteration:
+            return tuple()
+        if not disk_re.match(first):
+            first = fix_file_name(first)
+        return (first,) + tuple(map(fix_file_name, piter))
+else:
+    def fix_file_path(path_iter):
+        return tuple(map(fix_file_name, path_iter))
 
 
 class OtherSite(ValueError):
