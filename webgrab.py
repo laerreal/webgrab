@@ -417,7 +417,9 @@ class TagLink(Tag):
 
     @property
     def catch(self):
-        return self.element.get("rel") == "stylesheet"
+        rel = self.element.get("rel")
+        return rel.lower() == "stylesheet" \
+            or rel.lower() == "shortcut icon"
 
 
 globs = dict(globals())
