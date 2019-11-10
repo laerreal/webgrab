@@ -27,6 +27,7 @@ from os.path import (
     exists
 )
 from os import (
+    getcwd,
     name as os_name,
     environ,
     remove,
@@ -41,6 +42,9 @@ from collections import (
 )
 from traceback import (
     print_exc
+)
+from itertools import (
+    chain
 )
 
 
@@ -245,6 +249,9 @@ class Resourse(object):
         return self.full_url(".")
 
 
+SITE_DIR_PREFIX = None
+
+
 class Site(object):
 
     sites = {}
@@ -270,6 +277,8 @@ class Site(object):
         self.site_base = site_base
         if dir is None:
             dir = site_base
+            if SITE_DIR_PREFIX is not None:
+                dir = sep.join(chain(SITE_DIR_PREFIX.split(sep), [dir]))
         self.dir = tuple(abspath(dir).split(sep))
         self.prefix = tuple(suffix)
         self.url2file = {}
@@ -428,6 +437,9 @@ def to_cache(iri):
 
 
 def main():
+    global SITE_DIR_PREFIX
+    SITE_DIR_PREFIX = getcwd()
+
     start_page = environ.get("WEBGRAB_SITE", None)
     if start_page is None:
         print("Set WEBGRAB_SITE environment variable")
