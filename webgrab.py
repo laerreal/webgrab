@@ -44,6 +44,7 @@ from traceback import (
     print_exc
 )
 from itertools import (
+    count,
     chain
 )
 
@@ -433,6 +434,12 @@ RE_FILTERS = [
 ]
 
 
+def iter_inc_envs():
+    yield "WEBGRAB_INC"
+    for i in count(0):
+        yield "WEBGRAB_INC%d" % i
+
+
 def to_cache(iri):
     """This function implements logical 'AND' of all filters. I.e. to catch
 an IRI all inclusion filters must match and all exclusion filters must not
@@ -449,6 +456,16 @@ export WEBGRAB_INC=".*www\.site\.((org)|(com)).*"
 def main():
     global SITE_DIR_PREFIX
     SITE_DIR_PREFIX = getcwd()
+
+    misses = 2
+    for inc_env in iter_inc_envs():
+        inc = environ.get(inc_env, None)
+        if inc is None:
+            if not misses:
+                break
+            misses -= 1
+            continue
+        RE_FILTERS.append((True, compile(inc)))
 
     start_page = environ.get("WEBGRAB_SITE", None)
     if start_page is None:
