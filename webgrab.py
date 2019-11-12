@@ -429,13 +429,19 @@ for n, v in globs.items():
     if isinstance(v, type) and Tag in v.__bases__:
         TAG_HANDLERS[v.tag] = v
 
-RE_EXCLUSIONS = [
+RE_FILTERS = [
 ]
 
 
 def to_cache(iri):
-    for re in RE_EXCLUSIONS:
-        if re.match(iri):
+    """This function implements logical 'AND' of all filters. I.e. to catch
+an IRI all inclusion filters must match and all exclusion filters must not
+match. To get logical 'OR', build a composite regular expression. Ex.:
+
+export WEBGRAB_INC=".*www\.site\.((org)|(com)).*"
+"""
+    for catch, re in RE_FILTERS:
+        if bool(re.match(iri)) != catch:
             return False
     return True
 
