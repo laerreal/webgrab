@@ -47,6 +47,16 @@ from itertools import (
     count,
     chain
 )
+from six.moves.tkinter import (
+    Tk,
+    Scrollbar,
+    VERTICAL,
+    END,
+    Button
+)
+from six.moves.tkinter_ttk import (
+    Treeview
+)
 
 
 # IRI
@@ -230,6 +240,8 @@ class Resourse(object):
                 return rel_url
 
             cur_url = list(self.url_tuple)
+            if cur_url[-1]:
+                cur_url.pop()
 
         for name in parts:
             if name == ".":
@@ -359,7 +371,15 @@ class Site(object):
                 with urlopen(url2) as f:
                     if f.url != url2: # redirection
                         print("Redirected to: " + f.url)
-                        desc = self[f.url]
+                        try:
+                            desc = self[f.url]
+                        except OtherSite as os:
+                            site = self.sites.get((os.proto, os.site_base),
+                                None
+                            )
+                            if site is None:
+                                raise
+                            desc = site[f.url]
                         self.file2desc[filename] = desc
                         return desc
                     raw = f.read()
@@ -395,6 +415,9 @@ class Tag(object):
             if v is SKIP:
                 continue
             el.set(a, v)
+
+    def set_ref(self, idx, vel):
+        self.element.set(self.attrs[idx], val)
 
     catch = True
 
@@ -453,32 +476,18 @@ export WEBGRAB_INC=".*www\.site\.((org)|(com)).*"
     return True
 
 
-def main():
-    global SITE_DIR_PREFIX
-    SITE_DIR_PREFIX = getcwd()
-
-    misses = 2
-    for inc_env in iter_inc_envs():
-        inc = environ.get(inc_env, None)
-        if inc is None:
-            if not misses:
-                break
-            misses -= 1
-            continue
-        RE_FILTERS.append((True, compile(inc)))
-
-    start_page = environ.get("WEBGRAB_SITE", None)
-    if start_page is None:
-        print("Set WEBGRAB_SITE environment variable")
-        return -1
-
+def co_catcher(start_page, referenced_sites):
     site = Site(start_page)
-
-    referenced_sites = set()
 
     print(site)
 
-    starting = site["."]
+    try:
+        starting = site["."]
+    except OtherSite as os:
+        referenced_sites.add((os.proto, os.site_base,
+            tuple(os.suffix)
+        ))
+        return
 
     # Queue of pages to process
     queue = deque([starting])
@@ -492,6 +501,7 @@ def main():
             continue
         visited.add(page.url_tuple)
 
+        yield
         print("Processing " + str(page))
 
         has_snapshot = page.has_snapshot()
@@ -506,6 +516,7 @@ def main():
         stack = [(0, tree)]
 
         while stack:
+            yield
             depth, el = stack.pop()
             # print(" " * depth + str(el))
 
@@ -555,12 +566,15 @@ def main():
                             updated.append(SKIP)
                             continue
 
+                        yield
                         try:
                             res = site[full_base]
                         except OtherSite as os:
                             print("Skipping other site")
                             updated.append(ref)
-                            referenced_sites.add(os.site_base)
+                            referenced_sites.add((os.proto, os.site_base,
+                                tuple(os.suffix)
+                            ))
                             continue
                         except HTTPError as httpe:
                             if httpe.code == 403:
@@ -596,6 +610,85 @@ def main():
         if not has_snapshot and not ref_errors:
             page.snapshot()
             page.overwrite_cache()
+
+
+class Feedback(set):
+
+    def __init__(self, listener):
+        self._l = listener
+
+    def add(self, el):
+        super(Feedback, self).add(el)
+        self._l(*el)
+
+
+def main():
+    global SITE_DIR_PREFIX
+    SITE_DIR_PREFIX = getcwd()
+
+    misses = 2
+    for inc_env in iter_inc_envs():
+        inc = environ.get(inc_env, None)
+        if inc is None:
+            if not misses:
+                break
+            misses -= 1
+            continue
+        RE_FILTERS.append((True, compile(inc)))
+
+    start_page = environ.get("WEBGRAB_SITE", None)
+    if start_page is None:
+        print("Set WEBGRAB_SITE environment variable")
+        return -1
+
+    tk = Tk()
+    tk.geometry("1000x600")
+    tk.columnconfigure(0, weight = 1)
+    tk.columnconfigure(1, weight = 0)
+    tk.rowconfigure(0, weight = 1)
+    tk.rowconfigure(1, weight = 0)
+    tv = Treeview(tk)
+    tv.grid(row = 0, column = 0, sticky = "NESW")
+
+    vsb = Scrollbar(tk, orient = VERTICAL)
+    vsb.grid(row = 0, column = 1, sticky = "NSE")
+
+    tv.configure(yscrollcommand = vsb.set)
+    vsb.configure(command = tv.yview)
+
+    def on_add_site(proto, base, suffix):
+        tv.insert("", END,
+            text = proto + "://" + base + "/" + "/".join(suffix)
+        )
+
+    referenced_sites = Feedback(on_add_site)
+    catchers = [co_catcher(start_page, referenced_sites)]
+
+    def catch_selected():
+        for iid in tv.selection():
+            catcher = co_catcher(tv.item(iid, "text"), referenced_sites)
+            catchers.append(catcher)
+            tv.delete(iid)
+
+    bt_catch = Button(tk, text = "Catch selected", command = catch_selected)
+    bt_catch.grid(row = 1, column = 0, sticky = "NWS")
+
+    def catch_idle():
+        if catchers:
+            catcher = catchers[0]
+            try:
+                next(catcher)
+            except StopIteration:
+                catchers.pop(0)
+        else:
+            if not tv.get_children():
+                tv.destroy()
+
+        tk.after(10, catch_idle)
+
+    tk.after_idle(catch_idle)
+
+    tk.mainloop()
 
     print("Referenced sites:")
     for s in referenced_sites:
